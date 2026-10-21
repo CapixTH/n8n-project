@@ -1,0 +1,530 @@
+{
+  "name": "Sistema de Lembretes de Agendamento",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "agendamento",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "a1f0c001-0000-4000-8000-000000000001",
+      "name": "Novo Agendamento (Webhook)",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [0, 0],
+      "webhookId": "7c3e9a10-5b2d-4f6e-9a1b-agendamento01"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "b1000001-0000-4000-8000-000000000001",
+              "name": "id",
+              "value": "={{ 'AG-' + $now.toFormat('yyyyMMddHHmmss') }}",
+              "type": "string"
+            },
+            {
+              "id": "b1000001-0000-4000-8000-000000000002",
+              "name": "nome",
+              "value": "={{ ($json.body.nome || '').trim() }}",
+              "type": "string"
+            },
+            {
+              "id": "b1000001-0000-4000-8000-000000000003",
+              "name": "email",
+              "value": "={{ ($json.body.email || '').trim().toLowerCase() }}",
+              "type": "string"
+            },
+            {
+              "id": "b1000001-0000-4000-8000-000000000004",
+              "name": "telefone",
+              "value": "={{ ($json.body.telefone || '').toString().replace(/\\D/g, '') }}",
+              "type": "string"
+            },
+            {
+              "id": "b1000001-0000-4000-8000-000000000005",
+              "name": "servico",
+              "value": "={{ ($json.body.servico || '').trim() }}",
+              "type": "string"
+            },
+            {
+              "id": "b1000001-0000-4000-8000-000000000006",
+              "name": "data",
+              "value": "={{ ($json.body.data || '').trim() }}",
+              "type": "string"
+            },
+            {
+              "id": "b1000001-0000-4000-8000-000000000007",
+              "name": "hora",
+              "value": "={{ ($json.body.hora || '').trim() }}",
+              "type": "string"
+            },
+            {
+              "id": "b1000001-0000-4000-8000-000000000008",
+              "name": "status",
+              "value": "pendente",
+              "type": "string"
+            },
+            {
+              "id": "b1000001-0000-4000-8000-000000000009",
+              "name": "criado_em",
+              "value": "={{ $now.setZone('America/Sao_Paulo').toFormat('yyyy-MM-dd HH:mm:ss') }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "a1f0c001-0000-4000-8000-000000000002",
+      "name": "Normalizar Dados",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [220, 0]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "c1000001-0000-4000-8000-000000000001",
+              "leftValue": "={{ $json.nome }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "c1000001-0000-4000-8000-000000000002",
+              "leftValue": "={{ $json.email }}",
+              "rightValue": "^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$",
+              "operator": {
+                "type": "string",
+                "operation": "regex"
+              }
+            },
+            {
+              "id": "c1000001-0000-4000-8000-000000000003",
+              "leftValue": "={{ $json.servico }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "c1000001-0000-4000-8000-000000000004",
+              "leftValue": "={{ $json.data }}",
+              "rightValue": "^\\d{4}-\\d{2}-\\d{2}$",
+              "operator": {
+                "type": "string",
+                "operation": "regex"
+              }
+            },
+            {
+              "id": "c1000001-0000-4000-8000-000000000005",
+              "leftValue": "={{ $json.hora }}",
+              "rightValue": "^\\d{2}:\\d{2}$",
+              "operator": {
+                "type": "string",
+                "operation": "regex"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "a1f0c001-0000-4000-8000-000000000003",
+      "name": "Dados Válidos?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [440, 0]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "COLE_AQUI_O_ID_DA_PLANILHA",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Agendamentos",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [],
+          "schema": []
+        },
+        "options": {}
+      },
+      "id": "a1f0c001-0000-4000-8000-000000000004",
+      "name": "Salvar na Planilha",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [680, -100]
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('Normalizar Dados').item.json.email }}",
+        "subject": "=Agendamento confirmado - {{ $('Normalizar Dados').item.json.servico }}",
+        "emailType": "html",
+        "message": "=<p>Olá, <strong>{{ $('Normalizar Dados').item.json.nome }}</strong>!</p>\n<p>Seu agendamento foi registrado com sucesso:</p>\n<ul>\n  <li><strong>Serviço:</strong> {{ $('Normalizar Dados').item.json.servico }}</li>\n  <li><strong>Data:</strong> {{ DateTime.fromISO($('Normalizar Dados').item.json.data).toFormat('dd/MM/yyyy') }}</li>\n  <li><strong>Horário:</strong> {{ $('Normalizar Dados').item.json.hora }}</li>\n  <li><strong>Código:</strong> {{ $('Normalizar Dados').item.json.id }}</li>\n</ul>\n<p>Você receberá um lembrete um dia antes.</p>",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "id": "a1f0c001-0000-4000-8000-000000000005",
+      "name": "Enviar Confirmação (Gmail)",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [900, -100],
+      "webhookId": "7c3e9a10-5b2d-4f6e-9a1b-gmailconf001"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"sucesso\": true,\n  \"mensagem\": \"Agendamento registrado com sucesso\",\n  \"id\": \"{{ $('Normalizar Dados').item.json.id }}\"\n}",
+        "options": {
+          "responseCode": 201
+        }
+      },
+      "id": "a1f0c001-0000-4000-8000-000000000006",
+      "name": "Responder 201 (Sucesso)",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1120, -100]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"sucesso\": false,\n  \"erro\": \"Dados inválidos. Envie nome, email válido, servico, data (YYYY-MM-DD) e hora (HH:mm).\"\n}",
+        "options": {
+          "responseCode": 400
+        }
+      },
+      "id": "a1f0c001-0000-4000-8000-000000000007",
+      "name": "Responder 400 (Erro)",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [680, 100]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 18
+            }
+          ]
+        }
+      },
+      "id": "a1f0c001-0000-4000-8000-000000000008",
+      "name": "Todo Dia às 18h",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [0, 400]
+    },
+    {
+      "parameters": {
+        "operation": "read",
+        "documentId": {
+          "__rl": true,
+          "value": "COLE_AQUI_O_ID_DA_PLANILHA",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Agendamentos",
+          "mode": "name"
+        },
+        "options": {}
+      },
+      "id": "a1f0c001-0000-4000-8000-000000000009",
+      "name": "Ler Agendamentos",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [220, 400]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Mantém apenas os agendamentos de AMANHÃ que ainda estão pendentes\nconst amanha = DateTime.now()\n  .setZone('America/Sao_Paulo')\n  .plus({ days: 1 })\n  .toFormat('yyyy-MM-dd');\n\nconst filtrados = $input.all().filter(item => {\n  const data = String(item.json.data || '').trim();\n  const status = String(item.json.status || '').trim().toLowerCase();\n  return data === amanha && status === 'pendente';\n});\n\n// Ordena por horário\nfiltrados.sort((a, b) => String(a.json.hora).localeCompare(String(b.json.hora)));\n\n// Se não houver nada, retorna vazio e o fluxo para aqui\nreturn filtrados;"
+      },
+      "id": "a1f0c001-0000-4000-8000-000000000010",
+      "name": "Filtrar Agendamentos de Amanhã",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [440, 400]
+    },
+    {
+      "parameters": {
+        "batchSize": 1,
+        "options": {}
+      },
+      "id": "a1f0c001-0000-4000-8000-000000000011",
+      "name": "Percorrer Agendamentos",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [660, 400]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "d1000001-0000-4000-8000-000000000001",
+              "name": "data_formatada",
+              "value": "={{ DateTime.fromISO($json.data).toFormat('dd/MM/yyyy') }}",
+              "type": "string"
+            },
+            {
+              "id": "d1000001-0000-4000-8000-000000000002",
+              "name": "assunto",
+              "value": "=Lembrete: {{ $json.servico }} amanhã às {{ $json.hora }}",
+              "type": "string"
+            },
+            {
+              "id": "d1000001-0000-4000-8000-000000000003",
+              "name": "mensagem",
+              "value": "=<p>Olá, <strong>{{ $json.nome }}</strong>!</p>\n<p>Passando para lembrar do seu agendamento:</p>\n<ul>\n  <li><strong>Serviço:</strong> {{ $json.servico }}</li>\n  <li><strong>Data:</strong> {{ DateTime.fromISO($json.data).toFormat('dd/MM/yyyy') }}</li>\n  <li><strong>Horário:</strong> {{ $json.hora }}</li>\n</ul>\n<p>Caso não possa comparecer, responda este e-mail.</p>",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "id": "a1f0c001-0000-4000-8000-000000000012",
+      "name": "Montar Mensagem",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [880, 500]
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json.email }}",
+        "subject": "={{ $json.assunto }}",
+        "emailType": "html",
+        "message": "={{ $json.mensagem }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "id": "a1f0c001-0000-4000-8000-000000000013",
+      "name": "Enviar Lembrete (Gmail)",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [1100, 500],
+      "webhookId": "7c3e9a10-5b2d-4f6e-9a1b-gmaillemb001"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "COLE_AQUI_O_ID_DA_PLANILHA",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Agendamentos",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "id": "={{ $('Montar Mensagem').item.json.id }}",
+            "status": "lembrete_enviado"
+          },
+          "matchingColumns": ["id"],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "status",
+              "displayName": "status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "a1f0c001-0000-4000-8000-000000000014",
+      "name": "Atualizar Status",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [1320, 500]
+    },
+    {
+      "parameters": {
+        "amount": 2,
+        "unit": "seconds"
+      },
+      "id": "a1f0c001-0000-4000-8000-000000000015",
+      "name": "Aguardar 2s",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [1540, 500],
+      "webhookId": "7c3e9a10-5b2d-4f6e-9a1b-waitlemb0001"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Gera um único resumo com todos os lembretes enviados\nconst agendamentos = $('Filtrar Agendamentos de Amanhã').all();\nconst data = DateTime.now().setZone('America/Sao_Paulo').plus({ days: 1 }).toFormat('dd/MM/yyyy');\n\nconst linhas = agendamentos.map(a => `• ${a.json.hora} - ${a.json.nome} (${a.json.servico})`);\n\nreturn [{\n  json: {\n    total: agendamentos.length,\n    data,\n    texto: `📅 Agenda de ${data}\\n✅ ${agendamentos.length} lembrete(s) enviado(s)\\n\\n${linhas.join('\\n')}`\n  }\n}];"
+      },
+      "id": "a1f0c001-0000-4000-8000-000000000016",
+      "name": "Gerar Resumo do Dia",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [880, 300]
+    },
+    {
+      "parameters": {
+        "chatId": "COLE_AQUI_SEU_CHAT_ID",
+        "text": "={{ $json.texto }}",
+        "additionalFields": {}
+      },
+      "id": "a1f0c001-0000-4000-8000-000000000017",
+      "name": "Resumo para o Admin (Telegram)",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [1100, 300],
+      "webhookId": "7c3e9a10-5b2d-4f6e-9a1b-telegres0001"
+    },
+    {
+      "parameters": {},
+      "id": "a1f0c001-0000-4000-8000-000000000018",
+      "name": "Erro no Workflow",
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [0, 800]
+    },
+    {
+      "parameters": {
+        "chatId": "COLE_AQUI_SEU_CHAT_ID",
+        "text": "=🚨 Erro no workflow: {{ $json.workflow.name }}\n\nNó: {{ $json.execution.lastNodeExecuted }}\nMensagem: {{ $json.execution.error.message }}\n\nExecução: {{ $json.execution.url }}",
+        "additionalFields": {}
+      },
+      "id": "a1f0c001-0000-4000-8000-000000000019",
+      "name": "Alertar Erro (Telegram)",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [220, 800],
+      "webhookId": "7c3e9a10-5b2d-4f6e-9a1b-telegerr0001"
+    }
+  ],
+  "connections": {
+    "Novo Agendamento (Webhook)": {
+      "main": [[{ "node": "Normalizar Dados", "type": "main", "index": 0 }]]
+    },
+    "Normalizar Dados": {
+      "main": [[{ "node": "Dados Válidos?", "type": "main", "index": 0 }]]
+    },
+    "Dados Válidos?": {
+      "main": [
+        [{ "node": "Salvar na Planilha", "type": "main", "index": 0 }],
+        [{ "node": "Responder 400 (Erro)", "type": "main", "index": 0 }]
+      ]
+    },
+    "Salvar na Planilha": {
+      "main": [
+        [{ "node": "Enviar Confirmação (Gmail)", "type": "main", "index": 0 }]
+      ]
+    },
+    "Enviar Confirmação (Gmail)": {
+      "main": [
+        [{ "node": "Responder 201 (Sucesso)", "type": "main", "index": 0 }]
+      ]
+    },
+    "Todo Dia às 18h": {
+      "main": [[{ "node": "Ler Agendamentos", "type": "main", "index": 0 }]]
+    },
+    "Ler Agendamentos": {
+      "main": [
+        [
+          {
+            "node": "Filtrar Agendamentos de Amanhã",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filtrar Agendamentos de Amanhã": {
+      "main": [
+        [{ "node": "Percorrer Agendamentos", "type": "main", "index": 0 }]
+      ]
+    },
+    "Percorrer Agendamentos": {
+      "main": [
+        [{ "node": "Gerar Resumo do Dia", "type": "main", "index": 0 }],
+        [{ "node": "Montar Mensagem", "type": "main", "index": 0 }]
+      ]
+    },
+    "Montar Mensagem": {
+      "main": [
+        [{ "node": "Enviar Lembrete (Gmail)", "type": "main", "index": 0 }]
+      ]
+    },
+    "Enviar Lembrete (Gmail)": {
+      "main": [[{ "node": "Atualizar Status", "type": "main", "index": 0 }]]
+    },
+    "Atualizar Status": {
+      "main": [[{ "node": "Aguardar 2s", "type": "main", "index": 0 }]]
+    },
+    "Aguardar 2s": {
+      "main": [
+        [{ "node": "Percorrer Agendamentos", "type": "main", "index": 0 }]
+      ]
+    },
+    "Gerar Resumo do Dia": {
+      "main": [
+        [
+          {
+            "node": "Resumo para o Admin (Telegram)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Erro no Workflow": {
+      "main": [
+        [{ "node": "Alertar Erro (Telegram)", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "America/Sao_Paulo"
+  },
+  "tags": [],
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": false
+  }
+}
